@@ -29,6 +29,10 @@ impl PlayerIface {
         let _ = api::play_pause(&self.client).await;
     }
 
+    async fn seek(&self, offset: i64) {
+        let _ = api::seek(&self.client, offset).await;
+    }
+
     #[dbus_interface(property)]
     fn can_play(&self) -> bool {
         true
@@ -36,6 +40,11 @@ impl PlayerIface {
 
     #[dbus_interface(property)]
     fn can_pause(&self) -> bool {
+        true
+    }
+
+    #[dbus_interface(property)]
+    fn can_seek(&self) -> bool {
         true
     }
 }

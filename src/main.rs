@@ -1,4 +1,4 @@
-use std::{error::Error, sync::Arc};
+use std::{error::Error, sync::Arc, future};
 
 use clap::Parser;
 
@@ -19,5 +19,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
     let client = api::get_client(&args.client_id, &args.client_secret).await?;
     let _ = dbus::init(Arc::new(client)).await?;
-    loop {}
+    future::pending::<()>().await;
+
+    Ok(())
 }

@@ -1,6 +1,5 @@
 use rspotify::{clients::OAuthClient, scopes, AuthCodeSpotify, Config, Credentials, OAuth};
 use std::error::Error;
-use xdg;
 
 const API_AUTH_REDIRECT_URI: &str = "http://localhost:8888/callback";
 
