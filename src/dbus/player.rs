@@ -1,0 +1,28 @@
+use std::sync::Arc;
+
+use rspotify::AuthCodeSpotify;
+use zbus::dbus_interface;
+
+use crate::api;
+
+pub struct PlayerIface {
+    client: Arc<AuthCodeSpotify>,
+}
+
+impl PlayerIface {
+    pub fn new(client: Arc<AuthCodeSpotify>) -> Self {
+        Self { client }
+    }
+}
+
+#[dbus_interface(name = "org.mpris.MediaPlayer2.Player")]
+impl PlayerIface {
+    async fn pause(&self) {
+        let _ = api::pause(&self.client).await;
+    }
+
+    #[dbus_interface(property)]
+    fn can_pause(&self) -> bool {
+        true
+    }
+}
