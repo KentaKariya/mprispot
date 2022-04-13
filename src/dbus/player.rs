@@ -17,8 +17,21 @@ impl PlayerIface {
 
 #[dbus_interface(name = "org.mpris.MediaPlayer2.Player")]
 impl PlayerIface {
+    async fn play(&self) {
+        let _ = api::play(&self.client).await;
+    }
+
     async fn pause(&self) {
         let _ = api::pause(&self.client).await;
+    }
+
+    async fn play_pause(&self) {
+        let _ = api::play_pause(&self.client).await;
+    }
+
+    #[dbus_interface(property)]
+    fn can_play(&self) -> bool {
+        true
     }
 
     #[dbus_interface(property)]
