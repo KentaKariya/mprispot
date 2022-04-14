@@ -1,11 +1,16 @@
 use rspotify::{
-    model::{AdditionalType, CurrentlyPlayingContext},
+    model::{AdditionalType, CurrentlyPlayingContext, FullEpisode, FullTrack, Id, PlayableItem},
     prelude::OAuthClient,
     AuthCodeSpotify, ClientError,
 };
 use thiserror::Error;
+use zbus::zvariant::Value;
+
+use std::collections::HashMap;
 
 mod auth;
+
+const ALL_TYPES: [AdditionalType; 2] = [AdditionalType::Track, AdditionalType::Episode];
 
 #[derive(Debug, Error)]
 pub enum SpotifyError {
@@ -18,7 +23,42 @@ pub enum SpotifyError {
 
 type SpotifyResult<T> = Result<T, SpotifyError>;
 
-const ALL_TYPES: [AdditionalType; 2] = [AdditionalType::Track, AdditionalType::Episode];
+pub struct Metadata {
+    pub track_id: String,
+}
+
+impl From<Metadata> for HashMap<String, Value<'_>> {
+    fn from(m: Metadata) -> Self {
+        let mut map: HashMap<String, Value> = HashMap::new();
+        map.insert(String::from("mpris:trackid"), m.track_id.into());
+        map
+    }
+}
+
+impl TryFrom<FullTrack> for Metadata {
+    type Error = SpotifyError;
+
+    fn try_from(t: FullTrack) -> SpotifyResult<Metadata> {
+        match t.id {
+            Some(i) => Ok(Metadata {
+                track_id: i.to_string(),
+            }),
+            None => Err(SpotifyError::Parse(String::from(
+                "Could not read metadata of track",
+            ))),
+        }
+    }
+}
+
+impl TryFrom<FullEpisode> for Metadata {
+    type Error = SpotifyError;
+
+    fn try_from(e: FullEpisode) -> Result<Self, Self::Error> {
+        Ok(Metadata {
+            track_id: e.id.to_string(),
+        })
+    }
+}
 
 pub async fn get_client(
     client_id: &str,
@@ -49,9 +89,7 @@ pub async fn seek(client: &AuthCodeSpotify, offset_us: i64) -> SpotifyResult<()>
         .progress
         .map(|t| t.as_micros())
         .and_then(|u| i64::try_from(u).ok())
-        .ok_or_else(|| SpotifyError::Parse(String::from(
-            "Could not read track progress",
-        )))?;
+        .ok_or_else(|| SpotifyError::Parse(String::from("Could not read track progress")))?;
 
     let target_us = (current_us + offset_us).max(0) as u64;
     skip_to_position(client, target_us).await
@@ -62,11 +100,36 @@ pub async fn skip_to_position(client: &AuthCodeSpotify, target_us: u64) -> Spoti
     Ok(client.seek_track(target_ms, None).await?)
 }
 
+pub async fn metadata(client: &AuthCodeSpotify) -> SpotifyResult<Metadata> {
+    if let Some(i) = get_currently_playing(client).await?.item {
+        return match i {
+            PlayableItem::Track(t) => get_track_metadata(&t).await,
+            PlayableItem::Episode(e) => get_episode_metadata(&e).await,
+        };
+    }
+    Err(SpotifyError::Parse(String::from("Could not read track id")))
+}
+
+async fn get_track_metadata(t: &FullTrack) -> SpotifyResult<Metadata> {
+    match &t.id {
+        Some(i) => Ok(Metadata {
+            track_id: i.id().to_string(),
+        }),
+        None => Err(SpotifyError::Parse(String::from(
+            "Could not get track id of track",
+        ))),
+    }
+}
+
+async fn get_episode_metadata(e: &FullEpisode) -> SpotifyResult<Metadata> {
+    Ok(Metadata {
+        track_id: e.id.id().to_string(),
+    })
+}
+
 async fn get_currently_playing(client: &AuthCodeSpotify) -> SpotifyResult<CurrentlyPlayingContext> {
     client
         .current_playing(None, Some(&ALL_TYPES))
         .await?
-        .ok_or_else(|| SpotifyError::Parse(String::from(
-            "Could not get currently playing track",
-        )))
+        .ok_or_else(|| SpotifyError::Parse(String::from("Could not get currently playing track")))
 }

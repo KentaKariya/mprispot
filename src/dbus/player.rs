@@ -1,7 +1,7 @@
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use rspotify::AuthCodeSpotify;
-use zbus::dbus_interface;
+use zbus::{dbus_interface, zvariant::Value};
 
 use crate::api;
 
@@ -31,6 +31,14 @@ impl PlayerIface {
 
     async fn seek(&self, offset: i64) {
         let _ = api::seek(&self.client, offset).await;
+    }
+
+    #[dbus_interface(property)]
+    async fn metadata(&self) -> HashMap<String, Value<'_>> {
+        match api::metadata(&self.client).await {
+            Ok(m) => m.into(),
+            Err(_) => HashMap::new(),
+        }
     }
 
     #[dbus_interface(property)]
