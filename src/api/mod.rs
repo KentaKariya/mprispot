@@ -1,5 +1,5 @@
 use rspotify::{
-    model::{AdditionalType, CurrentlyPlayingContext, FullEpisode, FullTrack, Id, PlayableItem},
+    model::{AdditionalType, CurrentlyPlayingContext, FullEpisode, FullTrack, PlayableItem},
     prelude::OAuthClient,
     AuthCodeSpotify, ClientError,
 };
@@ -103,28 +103,11 @@ pub async fn skip_to_position(client: &AuthCodeSpotify, target_us: u64) -> Spoti
 pub async fn metadata(client: &AuthCodeSpotify) -> SpotifyResult<Metadata> {
     if let Some(i) = get_currently_playing(client).await?.item {
         return match i {
-            PlayableItem::Track(t) => get_track_metadata(&t).await,
-            PlayableItem::Episode(e) => get_episode_metadata(&e).await,
+            PlayableItem::Track(t) => Metadata::try_from(t),
+            PlayableItem::Episode(e) => Metadata::try_from(e),
         };
     }
     Err(SpotifyError::Parse(String::from("Could not read track id")))
-}
-
-async fn get_track_metadata(t: &FullTrack) -> SpotifyResult<Metadata> {
-    match &t.id {
-        Some(i) => Ok(Metadata {
-            track_id: i.id().to_string(),
-        }),
-        None => Err(SpotifyError::Parse(String::from(
-            "Could not get track id of track",
-        ))),
-    }
-}
-
-async fn get_episode_metadata(e: &FullEpisode) -> SpotifyResult<Metadata> {
-    Ok(Metadata {
-        track_id: e.id.id().to_string(),
-    })
 }
 
 async fn get_currently_playing(client: &AuthCodeSpotify) -> SpotifyResult<CurrentlyPlayingContext> {
