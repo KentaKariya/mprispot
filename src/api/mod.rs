@@ -35,6 +35,17 @@ impl From<Metadata> for HashMap<String, Value<'_>> {
     }
 }
 
+impl TryFrom<PlayableItem> for Metadata {
+    type Error = SpotifyError;
+
+    fn try_from(i: PlayableItem) -> Result<Self, Self::Error> {
+        match i {
+            PlayableItem::Track(t) => Metadata::try_from(t),
+            PlayableItem::Episode(e) => Metadata::try_from(e),
+        }
+    }
+}
+
 impl TryFrom<FullTrack> for Metadata {
     type Error = SpotifyError;
 
@@ -101,13 +112,10 @@ pub async fn skip_to_position(client: &AuthCodeSpotify, target_us: u64) -> Spoti
 }
 
 pub async fn metadata(client: &AuthCodeSpotify) -> SpotifyResult<Metadata> {
-    if let Some(i) = get_currently_playing(client).await?.item {
-        return match i {
-            PlayableItem::Track(t) => Metadata::try_from(t),
-            PlayableItem::Episode(e) => Metadata::try_from(e),
-        };
+    match get_currently_playing(client).await?.item {
+        Some(i) => Metadata::try_from(i),
+        None => Err(SpotifyError::Parse(String::from("Could not read track id"))),
     }
-    Err(SpotifyError::Parse(String::from("Could not read track id")))
 }
 
 async fn get_currently_playing(client: &AuthCodeSpotify) -> SpotifyResult<CurrentlyPlayingContext> {
