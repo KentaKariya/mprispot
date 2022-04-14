@@ -1,4 +1,4 @@
-use std::{error::Error, sync::Arc, future};
+use std::{error::Error, future, sync::Arc};
 
 use clap::Parser;
 
