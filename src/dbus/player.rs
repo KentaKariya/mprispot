@@ -4,6 +4,15 @@ use rspotify::AuthCodeSpotify;
 use zbus::{dbus_interface, zvariant::Value};
 
 use crate::api;
+use crate::api::Metadata;
+
+impl From<Metadata> for HashMap<String, Value<'_>> {
+    fn from(m: Metadata) -> Self {
+        let mut map: HashMap<String, Value> = HashMap::new();
+        map.insert(String::from("mpris:trackid"), m.track_id.into());
+        map
+    }
+}
 
 pub struct PlayerIface {
     client: Arc<AuthCodeSpotify>,

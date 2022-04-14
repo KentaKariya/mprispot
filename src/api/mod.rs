@@ -1,14 +1,11 @@
 use rspotify::{
-    model::{AdditionalType, CurrentlyPlayingContext},
+    model::{AdditionalType, CurrentlyPlayingContext, FullEpisode, FullTrack, PlayableItem},
     prelude::OAuthClient,
     AuthCodeSpotify, ClientError,
 };
 use thiserror::Error;
 
-use self::metadata::Metadata;
-
 mod auth;
-pub mod metadata;
 
 const ALL_TYPES: [AdditionalType; 2] = [AdditionalType::Track, AdditionalType::Episode];
 
@@ -28,6 +25,46 @@ pub async fn get_client(
     client_secret: &str,
 ) -> Result<AuthCodeSpotify, Box<dyn std::error::Error>> {
     auth::create_client(client_id, client_secret).await
+}
+
+pub struct Metadata {
+    pub track_id: String,
+}
+
+impl TryFrom<PlayableItem> for Metadata {
+    type Error = SpotifyError;
+
+    fn try_from(i: PlayableItem) -> Result<Self, Self::Error> {
+        match i {
+            PlayableItem::Track(t) => Metadata::try_from(t),
+            PlayableItem::Episode(e) => Metadata::try_from(e),
+        }
+    }
+}
+
+impl TryFrom<FullTrack> for Metadata {
+    type Error = SpotifyError;
+
+    fn try_from(t: FullTrack) -> SpotifyResult<Metadata> {
+        match t.id {
+            Some(i) => Ok(Metadata {
+                track_id: i.to_string(),
+            }),
+            None => Err(SpotifyError::Parse(String::from(
+                "Could not read metadata of track",
+            ))),
+        }
+    }
+}
+
+impl TryFrom<FullEpisode> for Metadata {
+    type Error = SpotifyError;
+
+    fn try_from(e: FullEpisode) -> Result<Self, Self::Error> {
+        Ok(Metadata {
+            track_id: e.id.to_string(),
+        })
+    }
 }
 
 pub async fn play(client: &AuthCodeSpotify) -> SpotifyResult<()> {
