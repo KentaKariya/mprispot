@@ -6,10 +6,14 @@ use zbus::{dbus_interface, zvariant::Value};
 use crate::api;
 use crate::api::Metadata;
 
+// Cannot use derive macros for properties
+// https://dbus.pages.freedesktop.org/zbus/faq.html#why-do-async-tokio-api-calls-from-interface-methods-not-work
 impl From<Metadata> for HashMap<String, Value<'_>> {
     fn from(m: Metadata) -> Self {
         let mut map: HashMap<String, Value> = HashMap::new();
         map.insert(String::from("mpris:trackid"), m.track_id.into());
+        map.insert(String::from("xesam:title"), m.title.into());
+        map.insert(String::from("xesam:album"), m.album.into());
         map
     }
 }

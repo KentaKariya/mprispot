@@ -4,6 +4,7 @@ use rspotify::{
     AuthCodeSpotify, ClientError,
 };
 use thiserror::Error;
+use zbus::zvariant::Type;
 
 mod auth;
 
@@ -27,8 +28,11 @@ pub async fn get_client(
     auth::create_client(client_id, client_secret).await
 }
 
+#[derive(Type)]
 pub struct Metadata {
     pub track_id: String,
+    pub title: String,
+    pub album: String,
 }
 
 impl TryFrom<PlayableItem> for Metadata {
@@ -46,14 +50,14 @@ impl TryFrom<FullTrack> for Metadata {
     type Error = SpotifyError;
 
     fn try_from(t: FullTrack) -> SpotifyResult<Metadata> {
-        match t.id {
-            Some(i) => Ok(Metadata {
-                track_id: i.to_string(),
-            }),
-            None => Err(SpotifyError::Parse(String::from(
-                "Could not read metadata of track",
-            ))),
-        }
+        let track_id =
+            t.id.map(|i| i.to_string())
+                .ok_or_else(|| SpotifyError::Parse(String::from("Could not get track id")))?;
+        Ok(Metadata {
+            track_id,
+            title: t.name,
+            album: t.album.name,
+        })
     }
 }
 
@@ -63,6 +67,8 @@ impl TryFrom<FullEpisode> for Metadata {
     fn try_from(e: FullEpisode) -> Result<Self, Self::Error> {
         Ok(Metadata {
             track_id: e.id.to_string(),
+            title: e.name,
+            album: e.show.name,
         })
     }
 }

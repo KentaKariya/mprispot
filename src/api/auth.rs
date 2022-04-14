@@ -10,7 +10,11 @@ pub async fn create_client(
     let creds = Credentials::new(client_id, client_secret);
     let oauth = OAuth {
         redirect_uri: String::from(API_AUTH_REDIRECT_URI),
-        scopes: scopes!("user-modify-playback-state"),
+        scopes: scopes!(
+            "user-read-playback-state",
+            "user-modify-playback-state",
+            "user-read-currently-playing"
+        ),
         ..Default::default()
     };
     let mut spotify = AuthCodeSpotify::with_config(creds, oauth, get_client_config()?);
